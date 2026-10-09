@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.Sammelbecken" parent="android:Theme.Material.NoActionBar" />
+</resources>
