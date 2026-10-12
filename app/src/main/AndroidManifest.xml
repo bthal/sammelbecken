@@ -35,6 +35,17 @@
         </activity>
 
         <service
+            android:name=".capture.CaptureTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
             android:name=".assist.SammelVoiceInteractionService"
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION">

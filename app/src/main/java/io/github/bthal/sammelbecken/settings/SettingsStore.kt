@@ -27,6 +27,11 @@ class SettingsStore(context: Context) {
         get() = prefs.getString(KEY_AUDIO, "") ?: ""
         set(value) = prefs.edit { putString(KEY_AUDIO, value.trim('/', ' ')) }
 
+    /** Last seen on-screen keyboard height in px, so the capture layout can reserve it before the keyboard appears. */
+    var keyboardHeightPx: Int
+        get() = prefs.getInt(KEY_KEYBOARD, 0)
+        set(value) = prefs.edit { putInt(KEY_KEYBOARD, value) }
+
     /** Null until the vault and note file are set. An empty audio folder means the vault root. */
     fun config(): VaultConfig? {
         val vault = vaultTreeUri ?: return null
@@ -38,5 +43,6 @@ class SettingsStore(context: Context) {
         const val KEY_VAULT = "vault_tree_uri"
         const val KEY_NOTE = "note_path"
         const val KEY_AUDIO = "audio_folder"
+        const val KEY_KEYBOARD = "keyboard_height_px"
     }
 }
