@@ -25,7 +25,16 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.imeAnimationTarget
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -42,6 +51,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,12 +60,16 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import io.github.bthal.sammelbecken.settings.SettingsActivity
+import io.github.bthal.sammelbecken.settings.SettingsStore
 import io.github.bthal.sammelbecken.theme.SammelbeckenTheme
 
 /**
@@ -116,8 +131,11 @@ class CaptureActivity : ComponentActivity() {
         Column(
             Modifier
                 .fillMaxSize()
-                .safeDrawingPadding()
-                .imePadding()
+                .windowInsetsPadding(
+                    WindowInsets.systemBars.union(WindowInsets.displayCutout)
+                        .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                )
+                .padding(bottom = reservedKeyboardHeight())
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -145,6 +163,33 @@ class CaptureActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Space kept free at the bottom for the keyboard, fixed from the first frame so the
+     * field and button don't shrink while the keyboard slides in. Uses the keyboard's
+     * final height (known as soon as its animation starts), else the height from last time.
+     */
+    @OptIn(ExperimentalLayoutApi::class)
+    @Composable
+    private fun reservedKeyboardHeight(): Dp {
+        val density = LocalDensity.current
+        val target = WindowInsets.imeAnimationTarget.getBottom(density)
+        val navBar = WindowInsets.navigationBars.getBottom(density)
+        val screenHeight = LocalWindowInfo.current.containerSize.height
+        val store = remember { SettingsStore(this) }
+        var remembered by remember { mutableIntStateOf(store.keyboardHeightPx) }
+        LaunchedEffect(target) {
+            if (target > 0 && target != remembered) {
+                remembered = target
+                store.keyboardHeightPx = target
+            }
+        }
+        val px = when {
+            remembered > 0 -> remembered
+            else -> (screenHeight * DEFAULT_KEYBOARD_FRACTION).toInt()
+        }
+        return with(density) { maxOf(px, navBar).toDp() }
     }
 
     @Composable
@@ -221,6 +266,11 @@ class CaptureActivity : ComponentActivity() {
 
     private fun hasMic() =
         ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    private companion object {
+        /** Keyboard share of the screen assumed before its real height has ever been seen. */
+        const val DEFAULT_KEYBOARD_FRACTION = 0.4f
+    }
 
     private fun formatElapsed(ms: Long): String {
         val s = ms / 1000
