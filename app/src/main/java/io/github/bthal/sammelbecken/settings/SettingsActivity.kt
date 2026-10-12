@@ -1,8 +1,11 @@
 package io.github.bthal.sammelbecken.settings
 
 import android.Manifest
+import android.app.StatusBarManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
 import android.provider.DocumentsContract
@@ -37,7 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import io.github.bthal.sammelbecken.R
 import io.github.bthal.sammelbecken.capture.CaptureActivity
+import io.github.bthal.sammelbecken.capture.CaptureTileService
 import io.github.bthal.sammelbecken.theme.SammelbeckenTheme
 import io.github.bthal.sammelbecken.vault.VaultPaths
 
@@ -158,6 +163,10 @@ class SettingsActivity : ComponentActivity() {
                 }
             }
 
+            Section("6. Quick Settings tile (optional)") {
+                Button(onClick = ::requestTile) { Text("Add Quick Settings tile") }
+            }
+
             OutlinedButton(
                 onClick = { startActivity(Intent(this@SettingsActivity, CaptureActivity::class.java)) },
                 enabled = vault != null && notePath.isNotBlank(),
@@ -199,6 +208,16 @@ class SettingsActivity : ComponentActivity() {
         val vault = store.vaultTreeUri ?: return null
         if (picked.authority != vault.authority) return null
         return VaultPaths.relativePath(DocumentsContract.getTreeDocumentId(vault), docId)
+    }
+
+    /** Shows the system "Add tile to Quick Settings?" prompt. */
+    private fun requestTile() {
+        getSystemService(StatusBarManager::class.java).requestAddTileService(
+            ComponentName(this, CaptureTileService::class.java),
+            getString(R.string.app_name),
+            Icon.createWithResource(this, R.drawable.ic_tile),
+            mainExecutor,
+        ) { }
     }
 
     private fun hasMic() =
